@@ -1,0 +1,72 @@
+sub CheckQVSourceStatus
+ 
+    set errormode = 0;
+     
+    QVSourceStatus:
+    LOAD Version,
+        SubField(Version, '.', 1) as Version_Major,
+        SubField(Version, '.', 2) as Version_Minor,
+        SubField(Version, '.', 3) as Version_Build,
+        SubField(Version, '.', 4) as Version_Revision,
+        ServerMode,
+        Path,
+        Licensed,
+        LicenceExpires,
+        IsLicensedAsServer
+    FROM [http://localhost:5555/QVSource?format=xml] (XmlSimple, Table is [QVSource]);
+          
+    if(ScriptError <> '') then   
+        //
+        // Looks like QVSOurce is not even running.
+        //
+        // Log message here or send email using QVSource Notifier Connector
+        //
+        trace 'QVSource is not running or not running on the requested port number.';
+        exit script;
+    endif     
+      
+    if(peek('Licensed', 0, 'QVSourceStatus') <> 'true') then
+        //
+        // QVSource is running but not licensed.
+        //
+        // Log message here or send email using QVSource Notifier Connector
+        //
+        trace 'QVSource is running but not licensed.';
+        exit script;
+    endif
+ 
+    if(peek('ServerMode', 0, 'QVSourceStatus') = 'true' and peek('IsLicensedAsServer', 0, 'QVSourceStatus') = 'false') then
+        //
+        // QVSource is running but not licensed to run in server mode.
+        //
+        // Log message here or send email using QVSource Notifier Connector
+        //
+        trace 'QVSource is running but not licensed to run in server mode.';
+        exit script;
+    endif     
+     
+    let currentVersionAsInt = (peek('Version_Major', 0, 'QVSourceStatus') * 1000) + (peek('Version_Minor', 0, 'QVSourceStatus') * 100) + (peek('Version_Build', 0, 'QVSourceStatus') * 10) + peek('Version_Revision', 0, 'QVSourceStatus');
+ 
+    // Let's pretend we need QVSource 1.4.2.6 or later....  
+    if(currentVersionAsInt < 1426) then
+        // Log message here or send email using QVSource Notifier Connector
+        trace 'Version too low. Please update QVSource.';
+        exit script;
+    endif
+     
+    QVSourceConnectorStatus:
+    LOAD Name as ConnectorName,
+        Version as ConnectorVersion,
+        Licensed as ConnectorLicensed
+    FROM [http://localhost:5555/QVSource?format=xml] (XmlSimple, Table is [QVSource/Connectors/Connector]);
+     
+    //
+    // Run other QVSource or connector specific tests here before deciding whether
+    // to proceed and load the rest of the application.
+    //
+     
+    set errormode = 1;
+ 
+endsub
+ 
+call CheckQVSourceStatus;
