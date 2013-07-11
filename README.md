@@ -1,4 +1,4 @@
-QlikView-Helper-Scripts
+QlikView Helper Scripts
 =======================
 A selection of QVSource related sample QlikView scripts. We are looking into taking many of the sample scripts from our wiki:
 http://www.qvsource.com/wiki/
